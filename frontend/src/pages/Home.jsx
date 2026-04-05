@@ -37,7 +37,7 @@ const Home = () => {
               <div key={product._id} className="card hover:shadow-xl transition-shadow">
                 <Link to={`/products/${product._id}`}>
                   <img
-                    src={product.images[0] || '/placeholder.jpg'}
+                    src={product.images?.[0] || product.image || '/placeholder.jpg'}
                     alt={product.name}
                     className="w-full h-64 object-cover rounded-lg mb-4"
                   />

@@ -13,6 +13,7 @@ import userRoutes from './routes/user.routes.js';
 import sellerRoutes from './routes/seller.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import reviewRoutes from './routes/review.routes.js';
+import wishlistRoutes from './routes/wishlist.routes.js';
 
 dotenv.config();
 
@@ -55,10 +56,16 @@ app.use('/api/users', userRoutes);
 app.use('/api/seller', sellerRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/reviews', reviewRoutes);
+app.use('/api/wishlist', wishlistRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'AromaMart API is running' });
+});
+
+// Root route for quick service check
+app.get('/', (req, res) => {
+  res.send('AromaMart API is up');
 });
 
 // Error handling middleware

@@ -5,6 +5,7 @@ import { fetchProduct, clearProduct } from '../store/slices/productSlice'
 import { addToCart } from '../store/slices/cartSlice'
 import { FiStar, FiShoppingCart, FiHeart } from 'react-icons/fi'
 import toast from 'react-hot-toast'
+import api from '../utils/axios'
 
 const ProductDetail = () => {
   const { id } = useParams()
@@ -15,11 +16,21 @@ const ProductDetail = () => {
   const [quantity, setQuantity] = useState(1)
   const [selectedSize, setSelectedSize] = useState('100ml')
   const [selectedImage, setSelectedImage] = useState(0)
+  const [reviews, setReviews] = useState([])
+  const [rating, setRating] = useState(5)
+  const [comment, setComment] = useState('')
+  const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
     dispatch(fetchProduct(id))
     return () => dispatch(clearProduct())
   }, [dispatch, id])
+
+  useEffect(() => {
+    api.get(`/reviews/product/${id}`)
+      .then(({ data }) => setReviews(data || []))
+      .catch(() => setReviews([]))
+  }, [id])
 
   const handleAddToCart = () => {
     if (!isAuthenticated) {
@@ -28,6 +39,45 @@ const ProductDetail = () => {
     }
     dispatch(addToCart({ productId: id, quantity, size: selectedSize }))
     toast.success('Added to cart!')
+  }
+
+  const handleAddWishlist = async () => {
+    try {
+      await api.post('/wishlist', { productId: id })
+      toast.success('Added to wishlist')
+    } catch (e) {
+      toast.error(e.response?.data?.message || 'Failed to add to wishlist')
+    }
+  }
+
+  const submitReview = async (e) => {
+    e.preventDefault()
+    if (!isAuthenticated) {
+      toast.error('Please login to write a review')
+      return
+    }
+    if (!comment.trim()) {
+      toast.error('Please enter your review')
+      return
+    }
+    setSubmitting(true)
+    try {
+      const { data } = await api.post('/reviews', {
+        productId: id,
+        rating,
+        comment,
+      })
+      toast.success('Review submitted')
+      // Refresh list
+      const res = await api.get(`/reviews/product/${id}`)
+      setReviews(res.data || [])
+      setComment('')
+      setRating(5)
+    } catch (e) {
+      toast.error(e.response?.data?.message || 'Failed to submit review')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   if (loading || !product) {
@@ -40,12 +90,12 @@ const ProductDetail = () => {
         {/* Product Images */}
         <div>
           <img
-            src={product.images[selectedImage] || product.images[0]}
+            src={product.images?.[selectedImage] || product.images?.[0] || product.image || '/placeholder.jpg'}
             alt={product.name}
             className="w-full h-96 object-cover rounded-lg mb-4"
           />
           <div className="flex gap-2">
-            {product.images.map((img, idx) => (
+            {(product.images || []).map((img, idx) => (
               <img
                 key={idx}
                 src={img}
@@ -166,6 +216,66 @@ const ProductDetail = () => {
             <h3 className="font-semibold mb-2">Description</h3>
             <p className="text-gray-600">{product.description}</p>
           </div>
+          
+          <div className="flex items-center gap-3 mt-6">
+            <button className="btn-primary flex items-center gap-2" onClick={handleAddWishlist}>
+              <FiHeart /> <span>Add to Wishlist</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Reviews */}
+      <div className="mt-12">
+        <h2 className="text-2xl font-bold mb-4">Customer Reviews</h2>
+        {reviews.length === 0 ? (
+          <div className="card">No reviews yet. Be the first to review!</div>
+        ) : (
+          <div className="space-y-4">
+            {reviews.map((r) => (
+              <div key={r._id} className="card">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <FiStar className="text-yellow-400" />
+                    <span className="font-semibold">{r.rating}/5</span>
+                  </div>
+                  <span className="text-sm text-gray-500">{r.user?.name || 'User'}</span>
+                </div>
+                <p className="text-gray-700">{r.comment}</p>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="mt-6">
+          <h3 className="font-semibold mb-2">Write a Review</h3>
+          <form onSubmit={submitReview} className="space-y-3">
+            <div>
+              <label className="block text-sm mb-1">Rating</label>
+              <select
+                value={rating}
+                onChange={(e) => setRating(Number(e.target.value))}
+                className="input-field w-40"
+              >
+                {[5,4,3,2,1].map(v => (
+                  <option key={v} value={v}>{v}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm mb-1">Comment</label>
+              <textarea
+                className="input-field w-full"
+                rows="3"
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                placeholder="Share your experience"
+              />
+            </div>
+            <button type="submit" disabled={submitting} className="btn-primary">
+              {submitting ? 'Submitting...' : 'Submit Review'}
+            </button>
+          </form>
         </div>
       </div>
 
@@ -181,7 +291,7 @@ const ProductDetail = () => {
                 className="card hover:shadow-xl transition-shadow"
               >
                 <img
-                  src={product.images[0]}
+                  src={product.images?.[0] || product.image || '/placeholder.jpg'}
                   alt={product.name}
                   className="w-full h-48 object-cover rounded-lg mb-4"
                 />

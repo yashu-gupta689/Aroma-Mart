@@ -138,7 +138,7 @@ const Products = () => {
                     className="card hover:shadow-xl transition-shadow"
                   >
                     <img
-                      src={product.images[0] || '/placeholder.jpg'}
+                      src={product.images?.[0] || product.image || '/placeholder.jpg'}
                       alt={product.name}
                       className="w-full h-64 object-cover rounded-lg mb-4"
                     />
